@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## 🏠 rent-room-app
 
 **تطبيق لتأجير الغرف والمنازل يشبه [Airbnb](https://www.airbnb.com/) باستخدام Flutter.**
@@ -50,3 +51,8 @@ lib/
     ├── chat/
     ├── profile/
     └── settings/
+=======
+# rent_room
+
+A new Flutter project.
+
