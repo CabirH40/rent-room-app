@@ -51,7 +51,7 @@ dependencies:
   geolocator: ^10.1.0
 
   # الإشعارات
-  firebase_messaging: ^15.7.0
+  firebase_messaging: ^15.2.9
 
   # Image Picker
   image_picker: ^1.1.1
