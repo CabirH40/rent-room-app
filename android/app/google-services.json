@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "747866558768",
+    "project_id": "rent-room-b7ecd",
+    "storage_bucket": "rent-room-b7ecd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:747866558768:android:3a2dc2842eb0c82fc178f5",
+        "android_client_info": {
+          "package_name": "com.example.rent_room"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBpr-VjamqtcVkWrUVkzlHqEeOKfDufxzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
