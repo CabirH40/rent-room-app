@@ -1,8 +1,10 @@
-import '../../../core/services/firestore_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../../auth/data/auth_repository.dart';
+
+final authRepo = AuthRepository();
 
 class PropertyRepository {
-  final _firestore = FirestoreService.instance;
+  final pb = authRepo.pbInstance;
 
   Future<void> addProperty({
     required String title,
@@ -13,16 +15,21 @@ class PropertyRepository {
     required double pricePerNight,
     required String ownerId,
   }) async {
-    await _firestore.collection('properties').add({
+    final body = {
       'title': title,
       'description': description,
-      'location': GeoPoint(latitude, longitude),
       'address': address,
+      'location': {
+        'latitude': latitude,
+        'longitude': longitude,
+      },
       'pricePerNight': pricePerNight,
       'ownerId': ownerId,
-      'images': [],
+      'images': [], // مبدئيًا فارغ، يمكنك تعديلها لاحقًا
       'isAvailable': true,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+
+    await pb.collection('properties').create(body: body);
   }
 }

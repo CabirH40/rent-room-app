@@ -1,24 +1,27 @@
-import '../../../core/services/firestore_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../../auth/data/auth_repository.dart';
+
+final authRepo = AuthRepository();
 
 class ChatRepository {
-  final _firestore = FirestoreService.instance;
+  final pb = authRepo.pbInstance;
 
   Future<void> createChat({
-    required String chatId,
     required String propertyId,
     required String senderId,
     required String message,
   }) async {
-    await _firestore.collection('chats').doc(chatId).set({
+    final body = {
       'propertyId': propertyId,
       'messages': [
         {
           'senderId': senderId,
           'message': message,
-          'timestamp': FieldValue.serverTimestamp(),
+          'timestamp': DateTime.now().toIso8601String(),
         },
       ],
-    });
+    };
+
+    await pb.collection('chats').create(body: body);
   }
 }

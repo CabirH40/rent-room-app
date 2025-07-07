@@ -1,8 +1,10 @@
-import '../../../core/services/firestore_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:pocketbase/pocketbase.dart';
+import '../../auth/data/auth_repository.dart';
+
+final authRepo = AuthRepository();
 
 class BookingRepository {
-  final _firestore = FirestoreService.instance;
+  final pb = authRepo.pbInstance;
 
   Future<void> addBooking({
     required String propertyId,
@@ -11,14 +13,16 @@ class BookingRepository {
     required DateTime startDate,
     required DateTime endDate,
   }) async {
-    await _firestore.collection('bookings').add({
+    final body = {
       'propertyId': propertyId,
       'userId': userId,
       'ownerId': ownerId,
-      'startDate': Timestamp.fromDate(startDate),
-      'endDate': Timestamp.fromDate(endDate),
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
       'status': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+      'createdAt': DateTime.now().toIso8601String(),
+    };
+
+    await pb.collection('bookings').create(body: body);
   }
 }
