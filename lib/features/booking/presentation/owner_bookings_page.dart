@@ -1,79 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:pocketbase/pocketbase.dart';
-import '../../auth/data/auth_repository.dart'; // استورد الريبو المحدث مع PocketBase
-import '../../auth/presentation/pages/auth_page.dart';
+import '../../auth/data/auth_repository.dart';
 
-class OwnerBookingsPage extends StatelessWidget {
+final authRepo = AuthRepository();
+
+class OwnerBookingsPage extends StatefulWidget {
   const OwnerBookingsPage({super.key});
 
-  Future<List<RecordModel>> _getBookings(String ownerId) async {
+  @override
+  State<OwnerBookingsPage> createState() => _OwnerBookingsPageState();
+}
+
+class _OwnerBookingsPageState extends State<OwnerBookingsPage> {
+  Future<List<RecordModel>> fetchOwnerBookings() async {
     final pb = authRepo.pbInstance;
-    final result = await pb.collection('bookings').getFullList(
-      filter: 'ownerId="$ownerId"',
-      sort: '-created', // الأحدث أولاً
-      expand: 'propertyId,userId', // جلب العقار والمستأجر معاً
+    final currentUser = authRepo.currentUser;
+    if (currentUser == null) {
+      throw Exception('User not logged in');
+    }
+
+    final properties = await pb.collection('properties').getFullList(
+      filter: 'ownerId = "${currentUser.id}"',
     );
-    return result;
+
+    final propertyIds = properties.map((e) => e.id).toList();
+    if (propertyIds.isEmpty) return [];
+
+    final bookings = await pb.collection('bookings').getFullList(
+      filter: propertyIds.map((id) => 'propertyId = "$id"').join(' || '),
+      expand: 'propertyId,tenantId',
+      sort: '-created',
+    );
+
+    return bookings;
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = AuthRepository().currentUser;
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('يجب تسجيل الدخول كمؤجر لرؤية الحجوزات')),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: const Text('حجوزاتي (كمؤجر)')),
+      appBar: AppBar(title: const Text('حجوزات العقارات (كمؤجر)')),
       body: FutureBuilder<List<RecordModel>>(
-        future: _getBookings(user.id),
+        future: fetchOwnerBookings(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+          if (snapshot.hasError) {
+            return Center(child: Text('خطأ: ${snapshot.error}'));
+          }
           final bookings = snapshot.data ?? [];
           if (bookings.isEmpty) {
-            return const Center(child: Text('لا يوجد حجوزات حتى الآن'));
+            return const Center(child: Text('لا توجد حجوزات حالياً'));
           }
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
             itemCount: bookings.length,
-            itemBuilder: (context, idx) {
-              final booking = bookings[idx];
-              final property = booking.expand['propertyId'] as RecordModel?;
-              final tenant = booking.expand['userId'] as RecordModel?;
+            itemBuilder: (context, index) {
+              final booking = bookings[index];
+
+              // تعديل هنا
+              final propertyList = booking.expand['propertyId'] as List<RecordModel>?;
+              final property = propertyList != null && propertyList.isNotEmpty ? propertyList.first : null;
+
+              final tenantList = booking.expand['tenantId'] as List<RecordModel>?;
+              final tenant = tenantList != null && tenantList.isNotEmpty ? tenantList.first : null;
+
+              final baseUrl = authRepo.pbInstance.baseUrl;
+              final propertyImage = property != null && property.getListValue('images').isNotEmpty
+                  ? '$baseUrl/api/files/${property.collectionId}/${property.id}/${property.getListValue('images')[0]}'
+                  : null;
+
+              final status = booking.getStringValue('status') ?? '';
 
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 8),
+                margin: const EdgeInsets.all(8),
                 child: ListTile(
-                  leading: property != null && property.getListValue('images').isNotEmpty
-                      ? Image.network(
-                    property.getListValue('images')[0],
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                  )
-                      : const Icon(Icons.home, size: 50, color: Colors.grey),
+                  leading: propertyImage != null
+                      ? Image.network(propertyImage, width: 50, height: 50, fit: BoxFit.cover)
+                      : const Icon(Icons.home, size: 40, color: Colors.grey),
                   title: Text(property?.getStringValue('title') ?? 'عقار غير معروف'),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                          'تاريخ الحجز: ${_formatDate(booking.getStringValue('startDate'))} - ${_formatDate(booking.getStringValue('endDate'))}'),
-                      Text(
-                        'الحالة: ${_getStatusLabel(booking.getStringValue('status'))}',
-                        style: TextStyle(
-                          color: _statusColor(booking.getStringValue('status')),
-                        ),
-                      ),
+                      Text('المستأجر: ${tenant?.getStringValue('name') ?? 'غير معروف'}'),
+                      Text('من: ${booking.getStringValue('startDate')?.substring(0, 10) ?? ''}'),
+                      Text('إلى: ${booking.getStringValue('endDate')?.substring(0, 10) ?? ''}'),
+                      Text('الحالة: ${_statusLabel(status)}'),
                     ],
                   ),
-                  trailing: Text('المستأجر: ${tenant?.getStringValue('name') ?? 'مجهول'}'),
-                  onTap: () {
-                    // يمكنك هنا فتح صفحة تفاصيل الحجز أو اتخاذ إجراء
-                  },
+                  trailing: (status == 'pending')
+                      ? PopupMenuButton<String>(
+                    onSelected: (value) async {
+                      try {
+                        await authRepo.pbInstance.collection('bookings').update(
+                          booking.id,
+                          body: {'status': value},
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              value == 'approved' ? 'تم قبول الحجز' : 'تم رفض الحجز',
+                            ),
+                          ),
+                        );
+                        setState(() {});
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('حدث خطأ أثناء التحديث: $e')),
+                        );
+                      }
+                    },
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'approved', child: Text('قبول')),
+                      PopupMenuItem(value: 'rejected', child: Text('رفض')),
+                    ],
+                  )
+                      : null,
                 ),
               );
             },
@@ -83,44 +124,16 @@ class OwnerBookingsPage extends StatelessWidget {
     );
   }
 
-  static String _formatDate(String? iso) {
-    // توقع أن التاريخ محفوظ كـ ISO8601 string
-    if (iso == null) return '';
-    try {
-      final dt = DateTime.parse(iso);
-      return '${dt.year}/${dt.month}/${dt.day}';
-    } catch (_) {
-      return '';
-    }
-  }
-
-  static String _getStatusLabel(String? status) {
+  String _statusLabel(String status) {
     switch (status) {
-      case 'confirmed':
-        return 'مؤكد';
+      case 'approved':
+        return 'مقبول';
+      case 'rejected':
+        return 'مرفوض';
       case 'pending':
-        return 'معلق';
-      case 'cancelled':
-        return 'ملغى';
-      case 'completed':
-        return 'مكتمل';
+        return 'قيد الانتظار';
       default:
-        return status ?? '';
-    }
-  }
-
-  static Color _statusColor(String? status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'completed':
-        return Colors.blueGrey;
-      default:
-        return Colors.black54;
+        return status;
     }
   }
 }

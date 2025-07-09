@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../auth/data/auth_repository.dart';
 import 'package:pocketbase/pocketbase.dart';
+import '../../auth/data/auth_repository.dart';
 
 final authRepo = AuthRepository();
 
@@ -10,46 +10,73 @@ class ProfilePage extends StatelessWidget {
   Future<RecordModel?> fetchUser() async {
     final user = authRepo.currentUser;
     if (user == null) return null;
-    // جلب بيانات المستخدم الحقيقية من السيرفر لضمان الحصول على كل الحقول
     return await authRepo.getUserById(user.id);
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text('الملف الشخصي')),
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      appBar: AppBar(
+        title: const Text('ملفي في BaytnBeyond'),
+        backgroundColor: Colors.blueAccent,
+        centerTitle: true,
+      ),
       body: FutureBuilder<RecordModel?>(
         future: fetchUser(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: Colors.blueAccent));
           }
           final user = snapshot.data;
           if (user == null) {
-            return const Center(child: Text('الرجاء تسجيل الدخول لرؤية الملف الشخصي'));
+            return const Center(
+              child: Text('يرجى تسجيل الدخول لرؤية ملفك الشخصي', style: TextStyle(fontSize: 16)),
+            );
           }
           final data = user.data;
           return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('الاسم: ${data['name'] ?? 'غير متوفر'}'),
-                const SizedBox(height: 8),
-                Text('الإيميل: ${data['email'] ?? 'غير متوفر'}'),
-                const SizedBox(height: 8),
-                Text('رقم الهاتف: ${data['phone'] ?? 'غير متوفر'}'),
-                const SizedBox(height: 8),
-                Text('الدور: ${data['role'] ?? 'غير محدد'}'),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () async {
-                    await authRepo.signOut();
-                    Navigator.pop(context);
-                  },
-                  child: const Text('تسجيل الخروج'),
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Icon(Icons.account_circle, size: 80, color: Colors.blueAccent),
+                    ),
+                    const SizedBox(height: 20),
+                    Text('👤 الاسم: ${data['name'] ?? 'غير متوفر'}', style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 10),
+                    Text('📧 البريد الإلكتروني: ${data['email'] ?? 'غير متوفر'}', style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 10),
+                    Text('📱 رقم الهاتف: ${data['phone'] ?? 'غير متوفر'}', style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 10),
+                    Text('🎯 الدور: ${data['role'] ?? 'غير محدد'}', style: const TextStyle(fontSize: 18)),
+                    const SizedBox(height: 30),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        onPressed: () async {
+                          await authRepo.signOut();
+                          Navigator.pop(context);
+                        },
+                        child: const Text('تسجيل الخروج', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           );
         },

@@ -1,8 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../auth/data/auth_repository.dart';
-import '../../home/presentation/welcome_page.dart';
-final authRepo = AuthRepository();
+import 'package:rent_room/features/home/presentation/welcome_page.dart';
+
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -14,7 +13,6 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-
     Timer(const Duration(seconds: 3), () {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const WelcomePage()),
@@ -27,38 +25,38 @@ class _SplashPageState extends State<SplashPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? Colors.grey[900] : Colors.blue[50],
+      backgroundColor: isDark ? Colors.black : Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // يمكنك استخدام صورة شعار أو Lottie animation هنا
-            // Image.asset('assets/logo.png', width: 120),
-            Icon(Icons.meeting_room, size: 80, color: Colors.blue[700]),
+            Icon(Icons.home_work_rounded, size: 90, color: Colors.blueAccent),
             const SizedBox(height: 24),
             Text(
-              'أهلاً بك في',
+              'مرحبًا بك في',
               style: TextStyle(
                 fontSize: 26,
-                color: isDark ? Colors.white : Colors.blue[900],
                 fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.blueGrey[900],
               ),
             ),
             Text(
-              'Rent Room',
+              'BaytnBeyond',
               style: TextStyle(
-                fontSize: 32,
-                color: Colors.blue,
+                fontSize: 34,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 2,
+                color: Colors.blueAccent,
+                letterSpacing: 1.5,
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
+            CircularProgressIndicator(color: Colors.blueAccent),
+            const SizedBox(height: 16),
             Text(
               '...جاري التحميل',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.grey[700],
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
               ),
             ),
           ],

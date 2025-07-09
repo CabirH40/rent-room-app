@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import '../../auth/data/auth_repository.dart';
+import 'package:pocketbase/pocketbase.dart';
 
 final authRepo = AuthRepository();
 
@@ -64,7 +65,7 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
             : MediaType('image', 'jpeg');
 
         final multipartFile = http.MultipartFile.fromBytes(
-          'images',
+          'images', // يجب تكرار نفس الاسم لجميع الصور
           fileBytes,
           filename: imgXFile.name,
           contentType: contentType,
@@ -81,13 +82,17 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         'isAvailable': true,
       };
 
-      await authRepo.pbInstance.collection('properties').create(
-        body: body,
-        files: filesToUpload, // رفع الصور هنا بشكل صحيح
+      // 🚩 رفع العقار بدون الصور أولاً
+      final record = await authRepo.pbInstance.collection('properties').create(body: body);
+
+      // 🚩 بعدها رفع الصور باستخدام update لضمان رفع جميع الصور
+      await authRepo.pbInstance.collection('properties').update(
+        record.id,
+        files: filesToUpload,
       );
 
       setState(() {
-        message = 'تم إضافة العقار بنجاح!';
+        message = 'تم إضافة العقار مع الصور بنجاح!';
         _loading = false;
         _titleController.clear();
         _descriptionController.clear();
@@ -100,7 +105,10 @@ class _AddPropertyPageState extends State<AddPropertyPage> {
         message = 'حدث خطأ أثناء الإضافة: $e';
         _loading = false;
       });
-      print('Error submitting property: $e');
+      print('❌ Error submitting property: $e');
+      if (e is ClientException) {
+        print('📌 PocketBase Error: ${e.response}');
+      }
     }
   }
 

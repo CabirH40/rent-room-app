@@ -1,4 +1,3 @@
-import 'package:pocketbase/pocketbase.dart';
 import '../../auth/data/auth_repository.dart';
 
 final authRepo = AuthRepository();
